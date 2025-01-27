@@ -1,55 +1,46 @@
-function addTask() {
-    const task = document.getElementById('task-input').value;
-    const reminder_time = document.getElementById('reminder-time').value;
+function getResponse() {
+    const userInput = document.getElementById('user_input').value;
+    const chatbox = document.getElementById('chatbox');
 
-    if (!task) {
-        alert('Please enter a task!');
+    if (!userInput.trim()) {
+        alert("Please type your question.");
         return;
     }
 
-    fetch('/add_task', {
+    // Display user's question in the chatbox
+    const userMessageDiv = document.createElement('div');
+    userMessageDiv.classList.add('user-message');
+    userMessageDiv.textContent = userInput;
+    chatbox.appendChild(userMessageDiv);
+
+    // Clear the textarea
+    document.getElementById('user_input').value = '';
+
+    // Scroll to the bottom of the chatbox
+    chatbox.scrollTop = chatbox.scrollHeight;
+
+    // Send the user input to Flask for processing
+    fetch('/get_response', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ task: task, reminder_time: reminder_time })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 'user_input': userInput })
     })
     .then(response => response.json())
     .then(data => {
-        alert(data.message);
-        loadTasks(); // Reload the task list
-    });
-}
+        // Display bot's response in the chatbox
+        const botResponseDiv = document.createElement('div');
+        botResponseDiv.classList.add('bot-response');
+        botResponseDiv.textContent = data.response;
+        chatbox.appendChild(botResponseDiv);
 
-function listenForTask() {
-    fetch('/listen_task', {
-        method: 'POST'
+        // Scroll to the bottom of the chatbox
+        chatbox.scrollTop = chatbox.scrollHeight;
     })
-    .then(response => response.json())
-    .then(data => {
-        document.getElementById('task-input').value = data.task;
+    .catch(error => {
+        const errorDiv = document.createElement('div');
+        errorDiv.classList.add('bot-response');
+        errorDiv.textContent = "Sorry, something went wrong. Please try again.";
+        chatbox.appendChild(errorDiv);
+        chatbox.scrollTop = chatbox.scrollHeight;
     });
 }
-
-function loadTasks() {
-    fetch('/get_tasks')
-        .then(response => response.json())
-        .then(data => {
-            const taskList = document.getElementById('tasks');
-            taskList.innerHTML = '';
-            data.forEach(task => {
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    <div class="task-info">
-                        <span>${task.task}</span><br>
-                        Reminder: <span>${task.reminder_time || 'Not set'}</span>
-                    </div>
-                    <div class="status">${task.status}</div>
-                `;
-                taskList.appendChild(li);
-            });
-        });
-}
-
-// Load tasks on page load
-window.onload = loadTasks;
